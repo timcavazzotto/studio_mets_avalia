@@ -66,7 +66,13 @@ async function inicializarApp() {
 }
 
 async function refreshPacientes() {
-  pacientesCache = await listPacientes();
+  try {
+    pacientesCache = await listPacientes();
+  } catch (err) {
+    console.error(err);
+    alert("Falha ao carregar pacientes: " + err.message + "\n\n(Código: " + (err.code || "desconhecido") + ")");
+    pacientesCache = [];
+  }
   const tbody = $("#tabela-pacientes tbody");
   tbody.innerHTML = pacientesCache.map((p) =>
     `<tr><td>${p.nome}</td><td>${p.data_nascimento || ""}</td><td>${p.sexo || ""}</td><td>${p.objetivo_inicial || ""}</td></tr>`
@@ -82,25 +88,35 @@ $("#form-novo-paciente").addEventListener("submit", async (e) => {
   e.preventDefault();
   const nome = $("#pac-nome").value.trim();
   if (!nome) return;
-  await addPaciente({
-    nome,
-    data_nascimento: $("#pac-nascimento").value || null,
-    sexo: $("#pac-sexo").value || null,
-    objetivo_inicial: $("#pac-objetivo").value || null,
-  });
-  e.target.reset();
-  await refreshPacientes();
-  alert("Paciente cadastrado.");
+  try {
+    await addPaciente({
+      nome,
+      data_nascimento: $("#pac-nascimento").value || null,
+      sexo: $("#pac-sexo").value || null,
+      objetivo_inicial: $("#pac-objetivo").value || null,
+    });
+    e.target.reset();
+    await refreshPacientes();
+    alert("Paciente cadastrado.");
+  } catch (err) {
+    console.error(err);
+    alert("Falha ao cadastrar paciente: " + err.message + "\n\n(Código: " + (err.code || "desconhecido") + ")");
+  }
 });
 
 // ---------------- Aba Nova Avaliação ----------------
 $("#btn-carregar-anterior").addEventListener("click", async () => {
   const pacienteId = $("#select-paciente-nova").value;
   if (!pacienteId) { alert("Selecione o paciente primeiro."); return; }
-  const ultima = await getUltimaAvaliacao(pacienteId);
-  if (!ultima) { alert("Este paciente ainda não possui avaliações anteriores."); return; }
-  preencherAPartirDe(ultima);
-  alert(`Dados da avaliação nº ${ultima.numero_avaliacao} (${ultima.data_avaliacao}) carregados (objetivo e medicamentos).`);
+  try {
+    const ultima = await getUltimaAvaliacao(pacienteId);
+    if (!ultima) { alert("Este paciente ainda não possui avaliações anteriores."); return; }
+    preencherAPartirDe(ultima);
+    alert(`Dados da avaliação nº ${ultima.numero_avaliacao} (${ultima.data_avaliacao}) carregados (objetivo e medicamentos).`);
+  } catch (err) {
+    console.error(err);
+    alert("Falha ao carregar avaliação anterior: " + err.message);
+  }
 });
 
 $("#select-paciente-nova").addEventListener("change", () => {
@@ -142,13 +158,18 @@ let pacienteAtualCache = null;
 $("#btn-carregar-historico").addEventListener("click", async () => {
   const pacienteId = $("#select-paciente-hist").value;
   if (!pacienteId) { alert("Selecione o paciente."); return; }
-  historicoCache = await getHistorico(pacienteId);
-  pacienteAtualCache = pacientesCache.find((p) => p.id === pacienteId);
+  try {
+    historicoCache = await getHistorico(pacienteId);
+    pacienteAtualCache = pacientesCache.find((p) => p.id === pacienteId);
 
-  const tbody = $("#tabela-historico tbody");
-  tbody.innerHTML = historicoCache.map((h) =>
-    `<tr><td>${h.numero_avaliacao}</td><td>${h.data_avaliacao}</td><td>${h.ipaq?.met_min_semana ?? ""}</td><td>${h.sono?.escore_total ?? ""}</td><td>${h.dass21?.depressao ?? ""}</td></tr>`
-  ).join("");
+    const tbody = $("#tabela-historico tbody");
+    tbody.innerHTML = historicoCache.map((h) =>
+      `<tr><td>${h.numero_avaliacao}</td><td>${h.data_avaliacao}</td><td>${h.ipaq?.met_min_semana ?? ""}</td><td>${h.sono?.escore_total ?? ""}</td><td>${h.dass21?.depressao ?? ""}</td></tr>`
+    ).join("");
+  } catch (err) {
+    console.error(err);
+    alert("Falha ao carregar histórico: " + err.message);
+  }
 });
 
 $("#btn-gerar-relatorio").addEventListener("click", () => {
