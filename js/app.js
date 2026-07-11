@@ -1,7 +1,7 @@
 // app.js — Ponto de entrada da aplicação (login, abas, orquestração geral)
-import { loginComGoogle, logout, onAuth, addPaciente, listPacientes, saveAvaliacao, getHistorico, getUltimaAvaliacao } from "./db.js";
+import { loginComGoogle, logout, onAuth, addPaciente, listPacientes, saveAvaliacao, updateAvaliacao, getHistorico, getUltimaAvaliacao, deleteAvaliacao } from "./db.js";
 import { computeScores } from "./formulario.js";
-import { generateFormHTML, getRawValues, getMedicamentos, resetMedicamentos, preencherAPartirDe } from "./ui-form.js";
+import { generateFormHTML, getRawValues, getMedicamentos, resetMedicamentos, preencherAPartirDe, preencherFormularioCompleto, limparFormulario } from "./ui-form.js";
 import { abrirRelatorio } from "./relatorio-view.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -20,13 +20,17 @@ $("#btn-login-google").addEventListener("click", async () => {
 
 $("#btn-logout").addEventListener("click", () => logout());
 
-// E-mail autorizado a usar o sistema (ajuste para o seu Google real).
+// E-mails autorizados a usar o sistema (ajuste para os seus Google reais).
 // Isso é só uma camada de conveniência/UX — a segurança de verdade está
-// nas Regras de Segurança do Firestore (veja README.md).
-const EMAIL_AUTORIZADO = "consultoriacvzt@gmail.com";
+// nas Regras de Segurança do Firestore (veja README.md) — as duas listas
+// precisam ficar iguais.
+const EMAILS_AUTORIZADOS = [
+  "consultoriacvzt@gmail.com",
+  "thimf178@gmail.com",
+];
 
 onAuth((user) => {
-  if (user && user.email !== EMAIL_AUTORIZADO) {
+  if (user && !EMAILS_AUTORIZADOS.includes(user.email)) {
     $("#login-erro").textContent = `A conta ${user.email} não está autorizada a acessar este sistema.`;
     logout();
     return;
@@ -120,7 +124,25 @@ $("#btn-carregar-anterior").addEventListener("click", async () => {
 });
 
 $("#select-paciente-nova").addEventListener("change", () => {
-  resetMedicamentos([]);
+  sairModoEdicao();
+  limparFormulario();
+});
+
+// estado de edição: quando preenchido, "Calcular e Salvar" atualiza essa avaliação
+// em vez de criar uma nova
+let avaliacaoEmEdicao = null; // { pacienteId, avaliacaoId, numero_avaliacao }
+
+function sairModoEdicao() {
+  avaliacaoEmEdicao = null;
+  $("#btn-cancelar-edicao").classList.add("hidden");
+  $("#aviso-edicao").classList.add("hidden");
+  $("#btn-calcular-salvar").textContent = "Calcular e Salvar Avaliação";
+}
+
+$("#btn-cancelar-edicao").addEventListener("click", () => {
+  sairModoEdicao();
+  limparFormulario();
+  $("#data-avaliacao").value = new Date().toISOString().slice(0, 10);
 });
 
 $("#btn-calcular-salvar").addEventListener("click", async () => {
@@ -128,6 +150,10 @@ $("#btn-calcular-salvar").addEventListener("click", async () => {
   const dataAvaliacao = $("#data-avaliacao").value;
   if (!pacienteId) { alert("Selecione o paciente."); return; }
   if (!dataAvaliacao) { alert("Informe a data da avaliação."); return; }
+  if (avaliacaoEmEdicao && avaliacaoEmEdicao.pacienteId !== pacienteId) {
+    alert("Você está editando uma avaliação de outro paciente. Clique em \"Cancelar edição\" antes de trocar de paciente.");
+    return;
+  }
 
   const raw = getRawValues();
   const scores = computeScores(raw);
@@ -139,15 +165,23 @@ Sono: ${scores.sono.classificacao || "não preenchido"}
 DASS-21: D=${scores.dass21.depressao ?? "--"} A=${scores.dass21.ansiedade ?? "--"} S=${scores.dass21.estresse ?? "--"}
 IMC: ${scores.antropometria.imc ?? "--"}`;
 
-  if (!confirm(`Resumo da avaliação:\n\n${resumo}\n\nSalvar esta avaliação?`)) return;
+  const acao = avaliacaoEmEdicao ? "ATUALIZAR" : "salvar";
+  if (!confirm(`Resumo da avaliação:\n\n${resumo}\n\n${avaliacaoEmEdicao ? "Salvar as alterações desta avaliação (irá sobrescrever a versão antiga)?" : "Salvar esta avaliação?"}`)) return;
 
   try {
-    await saveAvaliacao(pacienteId, dadosGerais, scores, getMedicamentos());
-    $("#status-nova").textContent = "Avaliação salva com sucesso.";
-    alert("Avaliação salva com sucesso. Você já pode gerar o relatório na aba Histórico/Relatório.");
+    if (avaliacaoEmEdicao) {
+      await updateAvaliacao(pacienteId, avaliacaoEmEdicao.avaliacaoId, dadosGerais, scores, getMedicamentos(), raw, avaliacaoEmEdicao.numero_avaliacao);
+      $("#status-nova").textContent = "Avaliação atualizada com sucesso.";
+      alert("Avaliação atualizada com sucesso.");
+      sairModoEdicao();
+    } else {
+      await saveAvaliacao(pacienteId, dadosGerais, scores, getMedicamentos(), raw);
+      $("#status-nova").textContent = "Avaliação salva com sucesso.";
+      alert("Avaliação salva com sucesso. Você já pode gerar o relatório na aba Histórico/Relatório.");
+    }
   } catch (err) {
     console.error(err);
-    alert("Falha ao salvar: " + err.message);
+    alert(`Falha ao ${avaliacaoEmEdicao ? "atualizar" : "salvar"}: ` + err.message);
   }
 });
 
@@ -161,16 +195,68 @@ $("#btn-carregar-historico").addEventListener("click", async () => {
   try {
     historicoCache = await getHistorico(pacienteId);
     pacienteAtualCache = pacientesCache.find((p) => p.id === pacienteId);
-
-    const tbody = $("#tabela-historico tbody");
-    tbody.innerHTML = historicoCache.map((h) =>
-      `<tr><td>${h.numero_avaliacao}</td><td>${h.data_avaliacao}</td><td>${h.ipaq?.met_min_semana ?? ""}</td><td>${h.sono?.escore_total ?? ""}</td><td>${h.dass21?.depressao ?? ""}</td></tr>`
-    ).join("");
+    renderTabelaHistorico(pacienteId);
   } catch (err) {
     console.error(err);
     alert("Falha ao carregar histórico: " + err.message);
   }
 });
+
+function renderTabelaHistorico(pacienteId) {
+  const tbody = $("#tabela-historico tbody");
+  tbody.innerHTML = historicoCache.map((h) => `<tr>
+    <td>${h.numero_avaliacao}</td><td>${h.data_avaliacao}</td>
+    <td>${h.ipaq?.met_min_semana ?? ""}</td><td>${h.sono?.escore_total ?? ""}</td><td>${h.dass21?.depressao ?? ""}</td>
+    <td>
+      <button type="button" class="btn-acao" data-editar="${h.id}">Editar</button>
+      <button type="button" class="btn-acao excluir" data-excluir="${h.id}">Excluir</button>
+    </td>
+  </tr>`).join("");
+
+  tbody.querySelectorAll("[data-editar]").forEach((btn) => {
+    btn.addEventListener("click", () => iniciarEdicaoAvaliacao(pacienteId, btn.dataset.editar));
+  });
+  tbody.querySelectorAll("[data-excluir]").forEach((btn) => {
+    btn.addEventListener("click", () => excluirAvaliacao(pacienteId, btn.dataset.excluir));
+  });
+}
+
+function iniciarEdicaoAvaliacao(pacienteId, avaliacaoId) {
+  const av = historicoCache.find((h) => h.id === avaliacaoId);
+  if (!av) return;
+  if (!av.dados_brutos) {
+    alert("Esta avaliação foi salva antes da função de edição existir, então não dá para reabrir os campos individuais aqui. Você ainda pode excluí-la e lançar de novo, se precisar corrigir algo.");
+    return;
+  }
+
+  // muda para a aba Nova Avaliação, seleciona o paciente e preenche tudo
+  document.querySelector('.tab-btn[data-tab="tab-nova"]').click();
+  $("#select-paciente-nova").value = pacienteId;
+  $("#data-avaliacao").value = av.data_avaliacao;
+  preencherFormularioCompleto(av.dados_brutos, av.medicamentos);
+
+  avaliacaoEmEdicao = { pacienteId, avaliacaoId: av.id, numero_avaliacao: av.numero_avaliacao };
+  $("#btn-cancelar-edicao").classList.remove("hidden");
+  $("#btn-calcular-salvar").textContent = "Salvar Alterações";
+  const aviso = $("#aviso-edicao");
+  aviso.textContent = `Editando a avaliação nº ${av.numero_avaliacao} (${av.data_avaliacao}) — ao salvar, esta avaliação será atualizada (não cria uma nova).`;
+  aviso.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function excluirAvaliacao(pacienteId, avaliacaoId) {
+  const av = historicoCache.find((h) => h.id === avaliacaoId);
+  if (!confirm(`Excluir permanentemente a avaliação nº ${av?.numero_avaliacao} (${av?.data_avaliacao})? Esta ação não pode ser desfeita.`)) return;
+  try {
+    await deleteAvaliacao(pacienteId, avaliacaoId);
+    historicoCache = historicoCache.filter((h) => h.id !== avaliacaoId);
+    renderTabelaHistorico(pacienteId);
+    alert("Avaliação excluída.");
+  } catch (err) {
+    console.error(err);
+    alert("Falha ao excluir: " + err.message);
+  }
+}
 
 $("#btn-gerar-relatorio").addEventListener("click", () => {
   if (!historicoCache.length) { alert("Carregue o histórico do paciente primeiro."); return; }
