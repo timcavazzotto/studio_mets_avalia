@@ -62,6 +62,11 @@ export function classifyTrabalho(score) {
   return "Tensão baixa";
 }
 
+export function classifyPreensaoAssimetria(diferencaPct) {
+  if (diferencaPct === null || diferencaPct === undefined) return null;
+  return diferencaPct >= 10 ? "Possível assimetria — considerar avaliação" : "Dentro do esperado";
+}
+
 export function classifyOssea(fatoresRisco) {
   if (fatoresRisco === null || fatoresRisco === undefined) return null;
   return fatoresRisco >= 2 ? "Considerar densitometria óssea" : "Baixo nº de fatores de risco";
@@ -77,6 +82,7 @@ export function getClassificacao(tabela, campo, bloco, sexo) {
   if (tabela === "nordic") return classifyNordic(bloco.regioes_limitacao);
   if (tabela === "dieta") return classifyDieta(bloco.escore_liquido);
   if (tabela === "antropometria" && campo === "imc") return classifyImc(bloco.imc);
+  if (tabela === "antropometria" && campo === "diferenca_preensao_pct") return classifyPreensaoAssimetria(bloco.diferenca_preensao_pct);
   if (tabela === "lsns6") return classifyLsns(bloco.escore_total);
   if (tabela === "auditc") return classifyAuditc(bloco.escore_total, sexo);
   if (tabela === "trabalho") return classifyTrabalho(bloco.escore_tensao);
@@ -96,6 +102,9 @@ export const DOMAIN_ROWS = [
   ["Padrão alimentar (screener)", "dieta", "escore_liquido"],
   ["IMC (kg/m2)", "antropometria", "imc"],
   ["Relação cintura/quadril", "antropometria", "rcq"],
+  ["Preensão manual — direita (kgf)", "antropometria", "preensao_direita"],
+  ["Preensão manual — esquerda (kgf)", "antropometria", "preensao_esquerda"],
+  ["Diferença entre mãos (%)", "antropometria", "diferenca_preensao_pct"],
   ["Conexão social (LSNS-6)", "lsns6", "escore_total"],
   ["Uso de álcool (AUDIT-C)", "auditc", "escore_total"],
   ["Tensão ocupacional (trabalho)", "trabalho", "escore_tensao"],
@@ -150,11 +159,19 @@ export function computeRadarScores(r) {
 
 const RADAR_COLORS = ["#30475e", "#b5651d", "#5a8a99", "#8a3f6b"];
 
+function multilineLabel(x, y, text, anchor, fontSize = 12.5, lineHeight = 14) {
+  const words = text.split(" ");
+  const n = words.length;
+  const startDy = -((n - 1) / 2) * lineHeight;
+  const tspans = words.map((w, i) => `<tspan x="${x}" dy="${i === 0 ? startDy : lineHeight}">${w}</tspan>`).join("");
+  return `<text x="${x}" y="${y}" font-size="${fontSize}" fill="#1f2933" text-anchor="${anchor}">${tspans}</text>`;
+}
+
 /** seriesList: [{label, scores}] — 1 ou mais séries (avaliações) a sobrepor no mesmo radar. */
 export function buildRadarSVG(seriesList) {
   const labels = Object.keys(seriesList[0].scores);
   const N = labels.length;
-  const W = 640, H = 640, cx = 320, cy = 340, R = 230;
+  const W = 820, H = 760, cx = 410, cy = 390, R = 210;
   const angleFor = (i) => -Math.PI / 2 + (i * 2 * Math.PI) / N;
 
   let grid = "";
@@ -173,9 +190,9 @@ export function buildRadarSVG(seriesList) {
     const a = angleFor(i);
     const x2 = cx + R * Math.cos(a), y2 = cy + R * Math.sin(a);
     axes += `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke="#cccccc" stroke-width="1"/>`;
-    const lx = cx + (R + 30) * Math.cos(a), ly = cy + (R + 30) * Math.sin(a);
+    const lx = cx + (R + 42) * Math.cos(a), ly = cy + (R + 42) * Math.sin(a);
     const anchor = Math.cos(a) > 0.3 ? "start" : Math.cos(a) < -0.3 ? "end" : "middle";
-    labelsSvg += `<text x="${lx}" y="${ly}" font-size="13" fill="#1f2933" text-anchor="${anchor}" dominant-baseline="middle">${labels[i]}</text>`;
+    labelsSvg += multilineLabel(lx, ly, labels[i], anchor);
   }
 
   let polys = "";
