@@ -45,7 +45,7 @@ export async function getPaciente(pacienteId) {
 }
 
 // ---------------- Avaliações ----------------
-export async function saveAvaliacao(pacienteId, dadosGerais, scores, medicamentos) {
+export async function saveAvaliacao(pacienteId, dadosGerais, scores, medicamentos, dadosBrutos) {
   const avaliacoesRef = collection(db, "pacientes", pacienteId, "avaliacoes");
   const existentes = await getDocs(avaliacoesRef);
   const numero = existentes.size + 1;
@@ -56,12 +56,27 @@ export async function saveAvaliacao(pacienteId, dadosGerais, scores, medicamento
     objetivo: dadosGerais.objetivo || null,
     tempo_treino_previo: dadosGerais.tempo_treino_previo || null,
     medicamentos: medicamentos || [],
+    dados_brutos: dadosBrutos || null, // guarda as respostas originais, permite reabrir para editar depois
     criado_em: serverTimestamp(),
     ...scores, // par_q, ipaq, sedentarismo, sono, dass21, nordic, dieta, antropometria,
     // lsns6, auditc, utilizacao_servicos, biomarcadores, saude_ossea, trabalho
   };
   const ref = await addDoc(avaliacoesRef, payload);
   return ref.id;
+}
+
+export async function updateAvaliacao(pacienteId, avaliacaoId, dadosGerais, scores, medicamentos, dadosBrutos, numeroAvaliacao) {
+  const payload = {
+    numero_avaliacao: numeroAvaliacao,
+    data_avaliacao: dadosGerais.data_avaliacao,
+    objetivo: dadosGerais.objetivo || null,
+    tempo_treino_previo: dadosGerais.tempo_treino_previo || null,
+    medicamentos: medicamentos || [],
+    dados_brutos: dadosBrutos || null,
+    editado_em: serverTimestamp(),
+    ...scores,
+  };
+  await setDoc(doc(db, "pacientes", pacienteId, "avaliacoes", avaliacaoId), payload);
 }
 
 export async function getHistorico(pacienteId) {
