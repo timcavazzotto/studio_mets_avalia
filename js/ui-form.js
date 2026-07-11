@@ -237,3 +237,77 @@ export function preencherAPartirDe(ultimaAvaliacao) {
   if (ultimaAvaliacao.tempo_treino_previo) document.getElementById("tempo_treino_previo").value = ultimaAvaliacao.tempo_treino_previo;
   resetMedicamentos(ultimaAvaliacao.medicamentos || []);
 }
+
+// ---------------- Editar avaliação existente ----------------
+function setRadio(fieldId, value) {
+  if (value === null || value === undefined) return;
+  const el = document.querySelector(`input[name="${fieldId}"][value="${value}"]`);
+  if (el) el.checked = true;
+}
+function setCheckbox(fieldId, value) {
+  const el = document.getElementById(fieldId);
+  if (el) el.checked = value === 1;
+}
+function setField(fieldId, value) {
+  const el = document.getElementById(fieldId);
+  if (el) el.value = value === null || value === undefined ? "" : value;
+}
+
+/** Limpa todos os campos do formulário (usar antes de iniciar uma nova avaliação
+ * do zero, ou antes de carregar uma avaliação para edição). */
+export function limparFormulario() {
+  document.querySelectorAll('#form-container input[type="text"], #form-container input[type="number"]').forEach((el) => { el.value = ""; });
+  document.querySelectorAll('#form-container input[type="radio"]').forEach((el) => { el.checked = false; });
+  document.querySelectorAll('#form-container input[type="checkbox"]').forEach((el) => { el.checked = false; });
+  document.querySelectorAll('#form-container select').forEach((el) => { el.selectedIndex = 0; });
+  resetMedicamentos([]);
+}
+
+/** Preenche o formulário inteiro a partir do objeto "dados_brutos" salvo numa
+ * avaliação anterior — usado para reabrir e editar uma avaliação já existente. */
+export function preencherFormularioCompleto(raw, medicamentos) {
+  limparFormulario();
+  if (!raw) return;
+
+  for (let i = 0; i < F.PARQ_ITEMS.length; i++) setRadio(`parq_${i}`, raw[`parq_${i}`]);
+  F.IPAQ_DOMINIOS.forEach(([domKey]) => {
+    F.IPAQ_INTENSIDADES.forEach(([intKey]) => {
+      setField(`ipaq_${domKey}_${intKey}_dias`, raw[`ipaq_${domKey}_${intKey}_dias`]);
+      setField(`ipaq_${domKey}_${intKey}_min`, raw[`ipaq_${domKey}_${intKey}_min`]);
+    });
+  });
+  for (let i = 0; i < F.SBQ_ITEMS.length; i++) {
+    setField(`sbq_${i}_sem`, raw[`sbq_${i}_sem`]);
+    setField(`sbq_${i}_fds`, raw[`sbq_${i}_fds`]);
+  }
+  setField("sono_hora_dormir", raw.sono_hora_dormir);
+  setField("sono_hora_acordar", raw.sono_hora_acordar);
+  for (let i = 0; i < F.SONO_ITEMS.length; i++) setRadio(`sono_${i}`, raw[`sono_${i}`]);
+  setRadio("sono_apneia", raw.sono_apneia);
+  for (let i = 0; i < F.DASS_ITEMS.length; i++) setRadio(`dass_${i}`, raw[`dass_${i}`]);
+  for (let i = 0; i < F.NORDIC_REGIOES.length; i++) {
+    setCheckbox(`nord_${i}_12m`, raw[`nord_${i}_12m`]);
+    setCheckbox(`nord_${i}_imp`, raw[`nord_${i}_imp`]);
+    setCheckbox(`nord_${i}_7d`, raw[`nord_${i}_7d`]);
+  }
+  for (let i = 0; i < F.DIET_ITEMS.length; i++) setField(`diet_${i}`, raw[`diet_${i}`]);
+  ["peso", "altura", "cintura", "quadril", "gordura", "pa", "preensao_dir", "preensao_esq"].forEach((id) => setField(id, raw[id]));
+  for (let i = 0; i < F.LSNS_ITEMS.length; i++) setRadio(`lsns_${i}`, raw[`lsns_${i}`]);
+  for (let i = 0; i < F.AUDIT_ITEMS.length; i++) setRadio(`audit_${i}`, raw[`audit_${i}`]);
+  setField("fumo", raw.fumo);
+  ["visita_clinico", "visita_esp", "visita_ps", "visita_int", "visita_fisio", "visita_psi"].forEach((id) => setField(id, raw[id]));
+  F.BIOMARCADORES.forEach(([fieldId]) => setField(fieldId, raw[fieldId]));
+  for (let i = 0; i < F.OSSEA_ITEMS.length; i++) setRadio(`ossea_${i}`, raw[`ossea_${i}`]);
+  setField("dxa_coluna", raw.dxa_coluna);
+  setField("dxa_femur", raw.dxa_femur);
+  setField("trab_horas", raw.trab_horas);
+  setField("trab_modalidade", raw.trab_modalidade);
+  setField("trab_tipo", raw.trab_tipo);
+  setField("trab_turno", raw.trab_turno);
+  for (let i = 0; i < F.TRAB_ITEMS.length; i++) setRadio(`trab_${i}`, raw[`trab_${i}`]);
+  setField("trab_estresse_geral", raw.trab_estresse_geral);
+  setField("objetivo", raw.objetivo);
+  setField("tempo_treino_previo", raw.tempo_treino_previo);
+
+  resetMedicamentos(medicamentos || []);
+}
