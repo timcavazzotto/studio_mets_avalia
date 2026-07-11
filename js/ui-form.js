@@ -92,6 +92,8 @@ export function generateFormHTML() {
   html += entryRow("quadril", "Circunf. quadril (cm)", { type: "number", step: "0.1" });
   html += entryRow("gordura", "% Gordura (se disponível)", { type: "number", step: "0.1" });
   html += entryRow("pa", "PA sistólica/diastólica (ex: 120/80)");
+  html += entryRow("preensao_dir", "Preensão manual — mão direita (kgf)", { type: "number", step: "0.1" });
+  html += entryRow("preensao_esq", "Preensão manual — mão esquerda (kgf)", { type: "number", step: "0.1" });
 
   html += `<h2>9. Conexão Social — LSNS-6</h2>`;
   F.LSNS_ITEMS.forEach((texto, i) => { html += radioRow(`lsns_${i}`, `${i + 1}. ${texto}`, F.LSNS_OPTS); });
@@ -209,7 +211,7 @@ export function getRawValues() {
     v[`nord_${i}_7d`] = checkVal(`nord_${i}_7d`);
   }
   for (let i = 0; i < F.DIET_ITEMS.length; i++) v[`diet_${i}`] = textVal(`diet_${i}`);
-  ["peso", "altura", "cintura", "quadril", "gordura", "pa"].forEach((id) => { v[id] = textVal(id); });
+  ["peso", "altura", "cintura", "quadril", "gordura", "pa", "preensao_dir", "preensao_esq"].forEach((id) => { v[id] = textVal(id); });
   for (let i = 0; i < F.LSNS_ITEMS.length; i++) v[`lsns_${i}`] = radioVal(`lsns_${i}`);
   for (let i = 0; i < F.AUDIT_ITEMS.length; i++) v[`audit_${i}`] = radioVal(`audit_${i}`);
   v.fumo = textVal("fumo");
