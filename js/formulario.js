@@ -240,9 +240,17 @@ export function computeScores(raw) {
   const imc = peso && altura ? Math.round((peso / Math.pow(altura / 100, 2)) * 10) / 10 : null;
   const cintura = n(raw.cintura), quadril = n(raw.quadril);
   const rcq = cintura && quadril ? Math.round((cintura / quadril) * 100) / 100 : null;
+  const preensaoDir = n(raw.preensao_dir), preensaoEsq = n(raw.preensao_esq);
+  let diferencaPreensaoPct = null;
+  if (preensaoDir && preensaoEsq) {
+    const maior = Math.max(preensaoDir, preensaoEsq);
+    diferencaPreensaoPct = Math.round((Math.abs(preensaoDir - preensaoEsq) / maior) * 1000) / 10;
+  }
   out.antropometria = {
     peso, altura, imc, cintura, quadril, rcq,
     percentual_gordura: n(raw.gordura), pa: raw.pa || null,
+    preensao_direita: preensaoDir, preensao_esquerda: preensaoEsq,
+    diferenca_preensao_pct: diferencaPreensaoPct,
   };
 
   // LSNS-6
