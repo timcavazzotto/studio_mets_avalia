@@ -50,8 +50,30 @@ button{font-family:inherit;}
 .q{margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--line);}
 .q:last-child{border-bottom:none;}
 .qtext{font-size:13.5px;margin-bottom:6px;}
-.opts{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;}
-.opts label{display:flex;align-items:center;gap:4px;}
+.opts{display:flex;gap:8px;flex-wrap:wrap;font-size:13px;}
+.opts label{
+  display:flex;align-items:center;
+  padding:8px 14px;
+  border:1.5px solid var(--line);
+  border-radius:20px;
+  cursor:pointer;
+  user-select:none;
+  background:white;
+  transition:background .12s, color .12s, border-color .12s;
+}
+.opts label:hover{border-color:var(--accent);}
+.opts input[type="radio"]{
+  position:absolute;
+  opacity:0;
+  width:0;height:0;
+  pointer-events:none;
+}
+.opts label:has(input:checked){
+  background:var(--accent);
+  color:white;
+  border-color:var(--accent);
+  font-weight:600;
+}
 
 .meds-list{margin-bottom:10px;}
 .med-item{display:flex;justify-content:space-between;align-items:center;background:var(--accent-light);padding:6px 10px;border-radius:5px;margin-bottom:6px;font-size:12.5px;}
