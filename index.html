@@ -63,8 +63,10 @@
       <label for="data-avaliacao">Data da avaliação:</label>
       <input type="date" id="data-avaliacao">
       <button id="btn-calcular-salvar" type="button" class="btn-primary">Calcular e Salvar Avaliação</button>
+      <button id="btn-cancelar-edicao" type="button" class="hidden">Cancelar edição</button>
     </div>
     <p id="status-nova" class="status"></p>
+    <p id="aviso-edicao" class="aviso-edicao hidden"></p>
     <div id="form-container" class="form-container"></div>
   </section>
 
@@ -77,7 +79,7 @@
       <button id="btn-gerar-relatorio" type="button" class="btn-primary">Gerar Relatório (PDF)</button>
     </div>
     <table id="tabela-historico" class="tbl">
-      <thead><tr><th>#</th><th>Data</th><th>IPAQ (MET-min)</th><th>Sono</th><th>DASS Depressão</th></tr></thead>
+      <thead><tr><th>#</th><th>Data</th><th>IPAQ (MET-min)</th><th>Sono</th><th>DASS Depressão</th><th>Ações</th></tr></thead>
       <tbody></tbody>
     </table>
   </section>
