@@ -73,14 +73,14 @@ export function generateFormHTML() {
   F.DASS_ITEMS.forEach(([texto], i) => { html += radioRow(`dass_${i}`, `${i + 1}. ${texto}`, F.DASS_OPTS); });
 
   html += `<h2>6. Dores e Queixas Musculoesqueléticas — Questionário Nórdico</h2>
-    <table class="tbl"><tr><th>Região</th><th>12 meses</th><th>Limitou atividades</th><th>7 dias</th></tr>`;
+    <p class="hint">Marque o que se aplica para cada região do corpo.</p>`;
   F.NORDIC_REGIOES.forEach((regiao, i) => {
-    html += `<tr><td>${regiao}</td>
-      <td><input type="checkbox" id="nord_${i}_12m"></td>
-      <td><input type="checkbox" id="nord_${i}_imp"></td>
-      <td><input type="checkbox" id="nord_${i}_7d"></td></tr>`;
+    html += `<div class="q"><div class="qtext">${regiao}</div><div class="opts">
+      <label><input type="checkbox" id="nord_${i}_12m"> 12 meses</label>
+      <label><input type="checkbox" id="nord_${i}_imp"> Limitou atividades</label>
+      <label><input type="checkbox" id="nord_${i}_7d"> 7 dias</label>
+    </div></div>`;
   });
-  html += `</table>`;
 
   html += `<h2>7. Padrão Alimentar</h2><p class="hint">Screener estruturado (frequência semanal).</p>`;
   F.DIET_ITEMS.forEach(([texto], i) => { html += entryRow(`diet_${i}`, texto, { type: "number", step: "0.5" }); });
