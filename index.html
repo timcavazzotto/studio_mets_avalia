@@ -48,10 +48,12 @@
     </form>
 
     <h2>Pacientes cadastrados</h2>
-    <table id="tabela-pacientes" class="tbl">
-      <thead><tr><th>Nome</th><th>Nascimento</th><th>Sexo</th><th>Objetivo</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-scroll">
+      <table id="tabela-pacientes" class="tbl">
+        <thead><tr><th>Nome</th><th>Nascimento</th><th>Sexo</th><th>Objetivo</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- ---------- Aba Nova Avaliação ---------- -->
@@ -76,12 +78,19 @@
       <label for="select-paciente-hist">Paciente:</label>
       <select id="select-paciente-hist"></select>
       <button id="btn-carregar-historico" type="button">Carregar histórico</button>
+    </div>
+    <div class="toolbar">
+      <span class="toolbar-label">Comparar avaliação atual com:</span>
+      <label class="radio-inline"><input type="radio" name="modo-comparacao" value="anterior" checked> Avaliação anterior</label>
+      <label class="radio-inline"><input type="radio" name="modo-comparacao" value="primeira"> Primeira avaliação (baseline)</label>
       <button id="btn-gerar-relatorio" type="button" class="btn-primary">Gerar Relatório (PDF)</button>
     </div>
-    <table id="tabela-historico" class="tbl">
-      <thead><tr><th>#</th><th>Data</th><th>IPAQ (MET-min)</th><th>Sono</th><th>DASS Depressão</th><th>Ações</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div class="table-scroll">
+      <table id="tabela-historico" class="tbl">
+        <thead><tr><th>#</th><th>Data</th><th>IPAQ (MET-min)</th><th>Sono</th><th>DASS Depressão</th><th>Ações</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </section>
 </div>
 
