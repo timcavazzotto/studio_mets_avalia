@@ -260,5 +260,9 @@ async function excluirAvaliacao(pacienteId, avaliacaoId) {
 
 $("#btn-gerar-relatorio").addEventListener("click", () => {
   if (!historicoCache.length) { alert("Carregue o histórico do paciente primeiro."); return; }
-  abrirRelatorio(pacienteAtualCache, historicoCache);
+  const modoComparacao = document.querySelector('input[name="modo-comparacao"]:checked')?.value || "anterior";
+  if (modoComparacao === "primeira" && historicoCache.length < 2) {
+    alert("Este paciente só tem 1 avaliação — não há uma primeira avaliação separada para comparar.");
+  }
+  abrirRelatorio(pacienteAtualCache, historicoCache, modoComparacao);
 });
