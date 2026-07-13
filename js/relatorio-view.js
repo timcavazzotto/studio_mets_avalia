@@ -46,16 +46,23 @@ function osseaHTML(ossea) {
 }
 
 /** paciente: {id, nome, data_nascimento, sexo, ...}
- *  historico: lista de avaliações (ordem cronológica) já carregada do Firestore */
-export function abrirRelatorio(paciente, historico) {
+ *  historico: lista de avaliações (ordem cronológica) já carregada do Firestore
+ *  modoComparacao: "anterior" (padrão, avaliação imediatamente anterior) ou
+ *                  "primeira" (compara sempre com a 1ª avaliação — baseline) */
+export function abrirRelatorio(paciente, historico, modoComparacao = "anterior") {
   const atual = historico[historico.length - 1];
-  const anterior = historico.length >= 2 ? historico[historico.length - 2] : null;
+  let anterior = null;
+  if (historico.length >= 2) {
+    anterior = modoComparacao === "primeira" ? historico[0] : historico[historico.length - 2];
+  }
   const sexo = paciente.sexo;
   const idade = calcIdade(paciente.data_nascimento, atual.data_avaliacao);
 
-  const comparar = historico.length >= 2 ? historico.slice(-2) : historico.slice(-1);
+  const comparar = anterior ? [anterior, atual] : [atual];
   const series = comparar.map((h) => ({ label: h.data_avaliacao, scores: computeRadarScores(h) }));
   const radarSVG = buildRadarSVG(series);
+
+  const rotuloComparacao = modoComparacao === "primeira" ? "Primeira avaliação (baseline)" : "Avaliação anterior";
 
   const achadosHTML = buildAchadosTableHTML(atual, anterior, sexo);
   const medsHTML = medsTableHTML(atual.medicamentos);
@@ -64,6 +71,7 @@ export function abrirRelatorio(paciente, historico) {
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Relatório — ${paciente.nome}</title>
 <style>
   @page { margin: 2cm 1.5cm; }
@@ -83,7 +91,20 @@ export function abrirRelatorio(paciente, historico) {
   .tbl th{background:#f2f5f6;}
   .muted{color:#5a6b7a;}
   .small{font-size:11px;}
-  .radar-wrap{text-align:center;margin:10px 0;}
+  .radar-wrap{text-align:center;margin:10px 0;overflow-x:auto;}
+  .radar-wrap svg{max-width:100%;height:auto;}
+  @media (max-width: 700px){
+    body{padding:12px;font-size:12.5px;}
+    header.doc-header{flex-direction:column;align-items:center;text-align:center;gap:8px;}
+    .prof{text-align:center;}
+    h1.titulo{font-size:20px;}
+    table.info{display:block;overflow-x:auto;white-space:nowrap;}
+    .tbl{display:block;overflow-x:auto;white-space:nowrap;}
+  }
+  @media print{
+    .radar-wrap{overflow-x:visible;}
+    table.info, .tbl{display:table;white-space:normal;}
+  }
   footer.doc-footer{background:#30475e;color:white;text-align:center;padding:10px;margin-top:30px;font-size:11px;}
   footer.doc-footer .nome{font-weight:bold;font-size:12px;}
   .interp-box{border:1px dashed #b7c0c7;padding:10px;font-style:italic;color:#5a6b7a;margin-top:8px;}
@@ -108,7 +129,7 @@ export function abrirRelatorio(paciente, historico) {
 
 <table class="info">
   <tr><td><b>Data de Nascimento:</b> ${paciente.data_nascimento || "—"}</td><td><b>Idade:</b> ${idade ?? "—"}</td></tr>
-  <tr><td><b>Avaliação atual:</b> ${atual.data_avaliacao}</td><td><b>Avaliação anterior:</b> ${anterior ? anterior.data_avaliacao : "— (primeira avaliação)"}</td></tr>
+  <tr><td><b>Avaliação atual:</b> ${atual.data_avaliacao}</td><td><b>${anterior ? rotuloComparacao + ":" : "Avaliação anterior:"}</b> ${anterior ? anterior.data_avaliacao : "— (primeira avaliação)"}</td></tr>
 </table>
 
 <h2 class="secao">1. Perfil Visual — Radar Comparativo</h2>
