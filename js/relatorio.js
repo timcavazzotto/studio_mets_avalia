@@ -72,10 +72,17 @@ export function classifyOssea(fatoresRisco) {
   return fatoresRisco >= 2 ? "Considerar densitometria óssea" : "Baixo nº de fatores de risco";
 }
 
+export function classifyAfmvLazer(afmvLazer, afvLazer) {
+  if (afmvLazer === null || afmvLazer === undefined) return null;
+  const atende = afmvLazer >= 150 || (afvLazer !== null && afvLazer !== undefined && afvLazer >= 75);
+  return atende ? "Atende a recomendação (bom)" : "Não atende a recomendação";
+}
+
 export function getClassificacao(tabela, campo, bloco, sexo) {
   bloco = bloco || {};
   if (tabela === "par_q") return classifyParq(bloco.respostas_sim);
-  if (tabela === "ipaq") return bloco.classificacao || null;
+  if (tabela === "ipaq" && campo === "afmv_lazer_min") return classifyAfmvLazer(bloco.afmv_lazer_min, bloco.afv_lazer_min);
+  if (tabela === "ipaq") return null; // volume total é só informativo, sem classificação
   if (tabela === "sedentarismo") return classifySedentarismo(bloco.horas_dia_media);
   if (tabela === "sono") return bloco.classificacao || null;
   if (tabela === "dass21") return classifyDass(bloco[campo], campo);
@@ -92,7 +99,8 @@ export function getClassificacao(tabela, campo, bloco, sexo) {
 
 export const DOMAIN_ROWS = [
   ["Prontidão p/ exercício (PAR-Q+)", "par_q", "respostas_sim"],
-  ["Atividade física (IPAQ)", "ipaq", "met_min_semana"],
+  ["Atividade física — volume total (MET-min/sem, todos os domínios)", "ipaq", "met_min_semana"],
+  ["Atividade física — AFMV tempo livre (min/sem)", "ipaq", "afmv_lazer_min"],
   ["Sedentarismo (SBQ)", "sedentarismo", "horas_dia_media"],
   ["Sono (instrumento interno)", "sono", "escore_total"],
   ["Depressão (DASS-21)", "dass21", "depressao"],
@@ -132,7 +140,7 @@ function clip100(v) { return Math.max(0, Math.min(100, v)); }
 export function computeRadarScores(r) {
   const s = {};
   const ipaq = r.ipaq || {};
-  s["Atividade Física"] = ipaq.met_min_semana != null ? clip100((ipaq.met_min_semana / 3000) * 100) : null;
+  s["Atividade Física"] = ipaq.afmv_lazer_min != null ? clip100((ipaq.afmv_lazer_min / 300) * 100) : null;
   const sed = r.sedentarismo || {};
   s["Sedentarismo (inv.)"] = sed.horas_dia_media != null ? clip100(100 - ((sed.horas_dia_media - 4) / 8) * 100) : null;
   const sono = r.sono || {};
