@@ -177,39 +177,20 @@ export function computeScores(raw) {
     }
   }
 
-  // Classificação categórica oficial do IPAQ (protocolo de pontuação), baseada em
-  // DIAS de atividade por semana — não em minutos totais.
-  const somaDias = (intensidade) => {
-    let total = 0;
-    for (const [domKey] of IPAQ_DOMINIOS) total += n(raw[`ipaq_${domKey}_${intensidade}_dias`]) || 0;
-    return Math.min(total, 7);
-  };
-  const diasComDuracaoMinima = (intensidade, minMinutos) => {
-    let total = 0;
-    for (const [domKey] of IPAQ_DOMINIOS) {
-      const dias = n(raw[`ipaq_${domKey}_${intensidade}_dias`]) || 0;
-      const min = n(raw[`ipaq_${domKey}_${intensidade}_min`]) || 0;
-      if (min >= minMinutos) total += dias;
-    }
-    return Math.min(total, 7);
-  };
-
-  const vigDiasTotal = somaDias("vigorosa");
-  const vigDias20min = diasComDuracaoMinima("vigorosa", 20);
-  const modECaminhadaDias30min = diasComDuracaoMinima("moderada", 30) + diasComDuracaoMinima("caminhada", 30);
-  const diasCombinados = Math.min(somaDias("vigorosa") + somaDias("moderada") + somaDias("caminhada"), 7);
-
-  const criterioAlto = totalMet >= 3000 || (vigDiasTotal >= 3 && totalMet >= 1500);
-  const criterioModerado = !criterioAlto && (
-    vigDias20min >= 3 ||
-    modECaminhadaDias30min >= 5 ||
-    (diasCombinados >= 5 && totalMet >= 600)
-  );
-  const classif = criterioAlto ? "Alto" : criterioModerado ? "Moderado" : "Baixo";
+  // Classificação baseada na recomendação da OMS de atividade física no TEMPO LIVRE
+  // (não no total entre domínios): AFMV (moderada+vigorosa) >= 150 min/sem, OU
+  // AFV (só vigorosa) >= 75 min/sem já atende à recomendação.
+  const lazerModMin = (n(raw.ipaq_lazer_moderada_dias) || 0) * (n(raw.ipaq_lazer_moderada_min) || 0);
+  const lazerVigMin = (n(raw.ipaq_lazer_vigorosa_dias) || 0) * (n(raw.ipaq_lazer_vigorosa_min) || 0);
+  const afmvLazer = lazerModMin + lazerVigMin;
+  const afvLazer = lazerVigMin;
+  const atendeRecomendacao = afmvLazer >= 150 || afvLazer >= 75;
+  const classif = atendeRecomendacao ? "Atende a recomendação (bom)" : "Não atende a recomendação";
 
   out.ipaq = {
     met_min_semana: Math.round(totalMet), classificacao: classif,
     min_caminhada: walkMin, min_moderada: modMin, min_vigorosa: vigMin,
+    afmv_lazer_min: Math.round(afmvLazer), afv_lazer_min: Math.round(afvLazer),
   };
 
   // Sedentarismo (SBQ)
