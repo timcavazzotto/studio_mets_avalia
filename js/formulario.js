@@ -176,9 +176,37 @@ export function computeScores(raw) {
       else if (intKey === "vigorosa") vigMin += totalMin;
     }
   }
-  let classif = "Baixo";
-  if (totalMet >= 3000 || (vigMin > 0 && vigMin / 8 >= 3)) classif = "Alto";
-  else if (totalMet >= 600) classif = "Moderado";
+
+  // Classificação categórica oficial do IPAQ (protocolo de pontuação), baseada em
+  // DIAS de atividade por semana — não em minutos totais.
+  const somaDias = (intensidade) => {
+    let total = 0;
+    for (const [domKey] of IPAQ_DOMINIOS) total += n(raw[`ipaq_${domKey}_${intensidade}_dias`]) || 0;
+    return Math.min(total, 7);
+  };
+  const diasComDuracaoMinima = (intensidade, minMinutos) => {
+    let total = 0;
+    for (const [domKey] of IPAQ_DOMINIOS) {
+      const dias = n(raw[`ipaq_${domKey}_${intensidade}_dias`]) || 0;
+      const min = n(raw[`ipaq_${domKey}_${intensidade}_min`]) || 0;
+      if (min >= minMinutos) total += dias;
+    }
+    return Math.min(total, 7);
+  };
+
+  const vigDiasTotal = somaDias("vigorosa");
+  const vigDias20min = diasComDuracaoMinima("vigorosa", 20);
+  const modECaminhadaDias30min = diasComDuracaoMinima("moderada", 30) + diasComDuracaoMinima("caminhada", 30);
+  const diasCombinados = Math.min(somaDias("vigorosa") + somaDias("moderada") + somaDias("caminhada"), 7);
+
+  const criterioAlto = totalMet >= 3000 || (vigDiasTotal >= 3 && totalMet >= 1500);
+  const criterioModerado = !criterioAlto && (
+    vigDias20min >= 3 ||
+    modECaminhadaDias30min >= 5 ||
+    (diasCombinados >= 5 && totalMet >= 600)
+  );
+  const classif = criterioAlto ? "Alto" : criterioModerado ? "Moderado" : "Baixo";
+
   out.ipaq = {
     met_min_semana: Math.round(totalMet), classificacao: classif,
     min_caminhada: walkMin, min_moderada: modMin, min_vigorosa: vigMin,
